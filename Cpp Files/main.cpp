@@ -1,5 +1,5 @@
 // ============================================================
-//  PharmaInventory.cpp
+//  main.cpp
 //  Pharma Inventory Management System
 //  Modular 3-File Architecture:
 //    1. pharma_medicines.txt  -- Product Master Catalog

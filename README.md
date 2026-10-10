@@ -269,7 +269,6 @@ All primary data is stored in pipe-delimited (`|`) text files:
 ```text
 PharmaCare-Inventory-System/
 ├── main.cpp                   # Complete C++ OOP Source Code (with CLI API modes)
-├── PharmaInventory.cpp        # C++ Core Implementation Mirror
 ├── main.exe                   # Compiled Native C++ Binary (MinGW GCC)
 ├── desktop_app.js             # Lightweight Desktop Bridge (invokes main.exe directly)
 ├── Run_Desktop_App.bat        # 1-Click Launcher for Windows Desktop Application
