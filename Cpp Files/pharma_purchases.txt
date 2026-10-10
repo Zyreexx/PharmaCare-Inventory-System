@@ -1,0 +1,2 @@
+# Pharma Inventory -- Purchases File
+P1|STK008|M001|Paracetamol 500mg|SUP001|100|25.00|10/10/2026
