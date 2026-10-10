@@ -57,7 +57,7 @@ namespace Color {
 void printBanner(const string& title) {
     cout << "\n" << Color::CYAN << string(64, '=') << Color::RESET << "\n";
     int pad = (64 - (int)title.size()) / 2;
-    cout << Color::BOLD << string(pad > 0 ? pad : 0, ' ')
+    cout << Color::BOLD << string(pad > 0 ? static_cast<size_t>(pad) : 0, ' ')
          << title << Color::RESET << "\n";
     cout << Color::CYAN << string(64, '=') << Color::RESET << "\n";
 }

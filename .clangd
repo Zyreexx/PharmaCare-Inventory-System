@@ -1,0 +1,15 @@
+CompileFlags:
+  Compiler: C:/MinGW/bin/g++.exe
+  Add:
+    - -std=c++11
+    - --target=i386-pc-windows-gnu
+    - -isystem
+    - C:/MinGW/lib/gcc/mingw32/6.3.0/include/c++
+    - -isystem
+    - C:/MinGW/lib/gcc/mingw32/6.3.0/include/c++/mingw32
+    - -isystem
+    - C:/MinGW/lib/gcc/mingw32/6.3.0/include/c++/backward
+    - -isystem
+    - C:/MinGW/include
+    - -isystem
+    - C:/MinGW/lib/gcc/mingw32/6.3.0/include
