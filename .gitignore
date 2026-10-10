@@ -1,0 +1,12 @@
+# Visual Studio Code & IDEs
+.vscode/
+.idea/
+
+# OS Specific
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Temporary & Log files
+*.tmp
+*.log

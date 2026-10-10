@@ -1,0 +1,7 @@
+# Pharma Alerts -- Generated on: 10/10/2026
+EXPIRING_SOON|STK002|M002|Amoxicillin 250mg|Expiring within 3 months - prioritize clearance/return.
+EXPIRED|STK005|M005|Cough Syrup|EXPIRED - Remove from physical shelf immediately!
+LOW_STOCK|STK005|M005|Cough Syrup|Current shelf stock is below reorder threshold.
+EXPIRING_SOON|STK006|M006|Insulin Regular|Expiring within 3 months - prioritize clearance/return.
+EXPIRED|STK007|M007|Amikacin 500mg|EXPIRED - Remove from physical shelf immediately!
+LOW_STOCK|STK007|M007|Amikacin 500mg|Current shelf stock is below reorder threshold.

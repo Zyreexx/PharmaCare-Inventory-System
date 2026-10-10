@@ -1,0 +1,3 @@
+# Pharma Inventory -- Suppliers File
+SUP001|Rahul Kumar|9876543210|Mumbai, Maharashtra|MedCo Pharma|rahul@medco.com
+SUP002|Priya Singh|8765432109|New Delhi|HealthPlus Ltd|priya@healthplus.in

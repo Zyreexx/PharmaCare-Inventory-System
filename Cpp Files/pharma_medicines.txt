@@ -1,0 +1,9 @@
+# Pharma Inventory -- Medicines Catalog File (Auto-Generated)
+# Format: Type|MedicineID|Name|Manufacturer|Price|[type-fields]
+Tablet|M001|Paracetamol 500mg|Cipla|25.00|500|10
+Tablet|M002|Amoxicillin 250mg|Sun Pharma|80.00|250|14
+Tablet|M003|Metformin 500mg|Dr. Reddys|45.00|500|14
+Syrup|M004|Cetirizine Syrup|Abbott|40.00|60.0|Mint
+Syrup|M005|Cough Syrup|Pfizer|55.00|100.0|Honey
+Injection|M006|Insulin Regular|Novo Nordisk|350.00|10.0|IV
+Injection|M007|Amikacin 500mg|Cipla|120.00|2.0|IM
