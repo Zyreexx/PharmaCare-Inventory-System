@@ -575,9 +575,20 @@ private:
   vector<Sale> m_sales;
   vector<Purchase> m_purchases;
 
-  const string F_MEDICINES = "pharma_medicines.txt", F_INVENTORY = "pharma_inventory.txt",
-               F_SUPPLIERS = "pharma_suppliers.txt", F_SALES = "pharma_sales.txt",
-               F_PURCHASES = "pharma_purchases.txt", F_ALERTS = "pharma_alerts.txt";
+  static string resolvePath(const string &filename) {
+    ifstream f(filename);
+    if (f.good()) return filename;
+    ifstream f2("Cpp Files/" + filename);
+    if (f2.good()) return "Cpp Files/" + filename;
+    return filename;
+  }
+
+  const string F_MEDICINES = resolvePath("pharma_medicines.txt"),
+               F_INVENTORY = resolvePath("pharma_inventory.txt"),
+               F_SUPPLIERS = resolvePath("pharma_suppliers.txt"),
+               F_SALES = resolvePath("pharma_sales.txt"),
+               F_PURCHASES = resolvePath("pharma_purchases.txt"),
+               F_ALERTS = resolvePath("pharma_alerts.txt");
 
   int m_nextSaleID, m_nextPurchaseID, m_nextStockNum;
 
