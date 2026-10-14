@@ -104,13 +104,23 @@ body {
 .brand-icon-wrapper {
     width: 38px;
     height: 38px;
-    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-    color: #ffffff;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px var(--primary-glow);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+.brand-icon-wrapper img,
+.brand-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: inherit;
+    display: block;
 }
 
 .brand-text h2 {
