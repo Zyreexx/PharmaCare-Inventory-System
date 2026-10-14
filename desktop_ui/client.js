@@ -151,12 +151,14 @@ async function loadAllData() {
     await Promise.all([
         loadStockData(),
         loadCatalogData(),
-        loadSuppliersData()
+        loadSuppliersData(),
+        loadReportsData()
     ]);
     renderDashboard();
     renderInventory();
     renderCatalog();
     renderSuppliers();
+    renderReports();
 }
 
 async function loadStockData() {
@@ -560,87 +562,101 @@ function renderSuppliers() {
 // 7. REPORTS & AUDITS RENDERING
 // ────────────────────────────────────────────────────────
 function renderReports() {
-    if (!AppState.reports) return;
-
-    // 1. Expiry Audit
+    // 1. Expiry Audit (From C++ stock state or reports)
     const tbodyExpiry = document.getElementById('tbody-report-expiry');
     tbodyExpiry.innerHTML = '';
-    const expiryAudit = AppState.reports.expiryAudit || [];
+    const expiryAudit = (AppState.reports && AppState.reports.expiryAudit && AppState.reports.expiryAudit.length > 0)
+        ? AppState.reports.expiryAudit
+        : AppState.stock.filter(item => item.status === 'EXPIRED' || item.status === 'EXPIRING SOON');
+
     if (expiryAudit.length === 0) {
-        tbodyExpiry.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1rem; color:var(--text-muted);">No expiring batches found.</td></tr>`;
+        tbodyExpiry.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.25rem; color:var(--text-muted);">No expiring batches found. All batches pass C++ isExpired() safety check.</td></tr>`;
     } else {
         expiryAudit.forEach(item => {
             const tr = document.createElement('tr');
             const badgeClass = item.status === 'EXPIRED' ? 'badge-danger' : 'badge-warning';
             tr.innerHTML = `
                 <td><code>${item.stockID}</code></td>
-                <td>${item.name}</td>
-                <td>${item.batchNumber}</td>
-                <td>${item.expiryDate}</td>
+                <td>${item.name || item.medicineName}</td>
+                <td>${item.batchNumber || item.batch}</td>
+                <td>${item.expiryDate || item.expiry}</td>
                 <td><span class="badge ${badgeClass}">${item.status}</span></td>
             `;
             tbodyExpiry.appendChild(tr);
         });
     }
 
-    // 2. Low Stock Triggers
+    // 2. Low Stock Triggers (From C++ stock state or reports)
     const tbodyLowStock = document.getElementById('tbody-report-lowstock');
     tbodyLowStock.innerHTML = '';
-    const lowStockAudit = AppState.reports.lowStockAudit || [];
+    const lowStockAudit = (AppState.reports && AppState.reports.lowStockAudit && AppState.reports.lowStockAudit.length > 0)
+        ? AppState.reports.lowStockAudit
+        : AppState.stock.filter(item => item.status === 'LOW STOCK' || (item.quantity !== undefined && item.minStockLevel !== undefined && item.quantity <= item.minStockLevel));
+
     if (lowStockAudit.length === 0) {
-        tbodyLowStock.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1rem; color:var(--text-muted);">All items meet minimum threshold.</td></tr>`;
+        tbodyLowStock.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.25rem; color:var(--text-muted);">All shelf items meet minimum stock thresholds.</td></tr>`;
     } else {
         lowStockAudit.forEach(item => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><code>${item.stockID}</code></td>
-                <td>${item.name}</td>
+                <td>${item.name || item.medicineName}</td>
                 <td><strong>${item.quantity}</strong></td>
-                <td>${item.threshold}</td>
+                <td>${item.minStockLevel || item.threshold || 10}</td>
                 <td><span class="badge badge-warning">REORDER</span></td>
             `;
             tbodyLowStock.appendChild(tr);
         });
     }
 
-    // 3. Sales Ledger
+    // 3. Sales Ledger (pharma_sales.txt)
     const tbodySales = document.getElementById('tbody-report-sales');
     tbodySales.innerHTML = '';
-    const sales = AppState.reports.sales || [];
-    let totalRevenue = 0;
-    sales.forEach(s => {
-        totalRevenue += s.total || 0;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><code>${s.saleID}</code></td>
-            <td>${s.name}</td>
-            <td>${s.customer}</td>
-            <td>${s.qty}</td>
-            <td>Rs. ${(s.total || 0).toFixed(2)}</td>
-            <td>${s.date}</td>
-        `;
-        tbodySales.appendChild(tr);
-    });
+    const sales = (AppState.reports && AppState.reports.sales) ? AppState.reports.sales : [];
+    let totalRevenue = (AppState.reports && AppState.reports.totalRevenue !== undefined) ? AppState.reports.totalRevenue : 0;
+
+    if (sales.length === 0) {
+        tbodySales.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:1.25rem; color:var(--text-muted);">No sales recorded yet. Dispense medicine to generate transactions.</td></tr>`;
+    } else {
+        sales.forEach(s => {
+            const saleTotal = s.total !== undefined ? s.total : ((s.quantity || s.qty || 0) * (s.price || 0));
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><code>${s.saleID || 'N/A'}</code></td>
+                <td>${s.medicineName || s.name || 'Unknown'}</td>
+                <td>${s.customer || s.customerName || 'Walk-in'}</td>
+                <td>${s.quantity !== undefined ? s.quantity : (s.qty || 0)}</td>
+                <td>Rs. ${saleTotal.toFixed(2)}</td>
+                <td>${s.date || 'N/A'}</td>
+            `;
+            tbodySales.appendChild(tr);
+        });
+    }
     document.getElementById('total-revenue-badge').textContent = `Rs. ${totalRevenue.toFixed(2)}`;
 
-    // 4. Purchases Ledger
+    // 4. Purchases Ledger (pharma_purchases.txt)
     const tbodyPurchases = document.getElementById('tbody-report-purchases');
     tbodyPurchases.innerHTML = '';
-    const purchases = AppState.reports.purchases || [];
-    let totalExpense = 0;
-    purchases.forEach(p => {
-        totalExpense += p.cost || 0;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><code>${p.purchaseID}</code></td>
-            <td>${p.name}</td>
-            <td>${p.supplier}</td>
-            <td>${p.qty}</td>
-            <td>Rs. ${(p.cost || 0).toFixed(2)}</td>
-            <td>${p.date}</td>
-        `;
-        tbodyPurchases.appendChild(tr);
-    });
+    const purchases = (AppState.reports && AppState.reports.purchases) ? AppState.reports.purchases : [];
+    let totalExpense = (AppState.reports && AppState.reports.totalExpenses !== undefined) ? AppState.reports.totalExpenses : 0;
+
+    if (purchases.length === 0) {
+        tbodyPurchases.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:1.25rem; color:var(--text-muted);">No procurement expenses logged yet.</td></tr>`;
+    } else {
+        purchases.forEach(p => {
+            const purchaseCost = p.total !== undefined ? p.total : (p.cost !== undefined ? p.cost : 0);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><code>${p.purchaseID || 'N/A'}</code></td>
+                <td>${p.medicineName || p.name || 'Unknown'}</td>
+                <td>${p.supplierID || p.supplier || 'N/A'}</td>
+                <td>${p.quantity !== undefined ? p.quantity : (p.qty || 0)}</td>
+                <td>Rs. ${purchaseCost.toFixed(2)}</td>
+                <td>${p.date || 'N/A'}</td>
+            `;
+            tbodyPurchases.appendChild(tr);
+        });
+    }
     document.getElementById('total-expense-badge').textContent = `Rs. ${totalExpense.toFixed(2)}`;
 }
 
