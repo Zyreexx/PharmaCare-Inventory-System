@@ -606,17 +606,17 @@ private:
     return nullptr;
   }
 
-  void loadMedicines() {
+  void loadMedicines(bool silent = false) {
     ifstream f(F_MEDICINES);
     if (!f) return;
     string line;
     while (getline(f, line)) {
       if (Medicine *m = parseMedicineLine(line)) m_medicines.push_back(m);
     }
-    printOK("Loaded " + to_string(m_medicines.size()) + " medicine catalog record(s).");
+    if (!silent) printOK("Loaded " + to_string(m_medicines.size()) + " medicine catalog record(s).");
   }
 
-  void loadInventory() {
+  void loadInventory(bool silent = false) {
     ifstream f(F_INVENTORY);
     if (!f) return;
     string line;
@@ -630,10 +630,10 @@ private:
         } catch (...) {}
       }
     }
-    printOK("Loaded " + to_string(m_stocks.size()) + " inventory stock record(s).");
+    if (!silent) printOK("Loaded " + to_string(m_stocks.size()) + " inventory stock record(s).");
   }
 
-  void loadSuppliers() {
+  void loadSuppliers(bool silent = false) {
     ifstream f(F_SUPPLIERS);
     if (!f) return;
     string line;
@@ -641,7 +641,7 @@ private:
       if (line.empty() || line[0] == '#') continue;
       if (Supplier *s = Supplier::deserialize(line)) m_suppliers.push_back(s);
     }
-    printOK("Loaded " + to_string(m_suppliers.size()) + " supplier(s).");
+    if (!silent) printOK("Loaded " + to_string(m_suppliers.size()) + " supplier(s).");
   }
 
   void loadSales() {
@@ -709,11 +709,11 @@ private:
   }
 
 public:
-  Inventory() : m_nextSaleID(1), m_nextPurchaseID(1), m_nextStockNum(1) {
-    printSection("Loading 3-File Pharmacy Database");
-    loadMedicines();
-    loadInventory();
-    loadSuppliers();
+  Inventory(bool silent = false) : m_nextSaleID(1), m_nextPurchaseID(1), m_nextStockNum(1) {
+    if (!silent) printSection("Loading 3-File Pharmacy Database");
+    loadMedicines(silent);
+    loadInventory(silent);
+    loadSuppliers(silent);
     loadSales();
     loadPurchases();
   }
@@ -1157,6 +1157,214 @@ public:
       cout << string(45, '-') << "\n";
     }
   }
+
+  // CLI API methods for Desktop Application
+  void apiGetStock() const {
+    cout << "[\n";
+    for (size_t i = 0; i < m_stocks.size(); ++i) {
+      const StockItem *s = m_stocks[i];
+      const Medicine *m = findMedicine(s->getMedicineID());
+      const Supplier *sup = findSupplier(s->getSupplierID());
+      cout << "  {"
+           << "\"stockID\":\"" << s->getStockID() << "\","
+           << "\"medicineID\":\"" << s->getMedicineID() << "\","
+           << "\"medicineName\":\"" << (m ? m->getName() : "Unknown") << "\","
+           << "\"type\":\"" << (m ? m->getType() : "N/A") << "\","
+           << "\"supplierID\":\"" << s->getSupplierID() << "\","
+           << "\"supplierName\":\"" << (sup ? sup->getCompany() : s->getSupplierID()) << "\","
+           << "\"batch\":\"" << s->getBatch() << "\","
+           << "\"quantity\":" << s->getQuantity() << ","
+           << "\"price\":" << (m ? m->getPrice() : 0.0) << ","
+           << "\"mfgDate\":\"" << s->getMfgDate() << "\","
+           << "\"expiry\":\"" << s->getExpiry().toString() << "\","
+           << "\"minStock\":" << s->getMinStock() << ","
+           << "\"isExpired\":" << (s->isExpired() ? "true" : "false") << ","
+           << "\"isExpiringSoon\":" << (s->isExpiringSoon() ? "true" : "false") << ","
+           << "\"isLowStock\":" << (s->isLowStock() ? "true" : "false")
+           << "}" << (i + 1 < m_stocks.size() ? "," : "") << "\n";
+    }
+    cout << "]\n";
+  }
+
+  void apiGetCatalog() const {
+    cout << "[\n";
+    for (size_t i = 0; i < m_medicines.size(); ++i) {
+      const Medicine *m = m_medicines[i];
+      cout << "  {"
+           << "\"id\":\"" << m->getID() << "\","
+           << "\"name\":\"" << m->getName() << "\","
+           << "\"type\":\"" << m->getType() << "\","
+           << "\"manufacturer\":\"" << m->getManufacturer() << "\","
+           << "\"price\":" << m->getPrice() << ","
+           << "\"usage\":\"" << m->getUsageInstructions() << "\""
+           << "}" << (i + 1 < m_medicines.size() ? "," : "") << "\n";
+    }
+    cout << "]\n";
+  }
+
+  void apiGetSuppliers() const {
+    cout << "[\n";
+    for (size_t i = 0; i < m_suppliers.size(); ++i) {
+      const Supplier *s = m_suppliers[i];
+      cout << "  {"
+           << "\"id\":\"" << s->getID() << "\","
+           << "\"company\":\"" << s->getCompany() << "\","
+           << "\"name\":\"" << s->getName() << "\","
+           << "\"phone\":\"" << s->getPhone() << "\","
+           << "\"email\":\"" << s->getEmail() << "\","
+           << "\"address\":\"" << s->getAddress() << "\""
+           << "}" << (i + 1 < m_suppliers.size() ? "," : "") << "\n";
+    }
+    cout << "]\n";
+  }
+
+  void apiSell(const string &stockID, int qty, const string &customer) {
+    StockItem *stock = findStockItem(stockID);
+    if (!stock) {
+      cout << "{\"success\":false,\"error\":\"Stock batch not found: " << stockID << "\"}\n";
+      return;
+    }
+    if (stock->isExpired()) {
+      cout << "{\"success\":false,\"error\":\"PATIENT SAFETY VIOLATION: Batch " << stock->getBatch()
+           << " has EXPIRED! C++ safety gate has rejected the sale.\"}\n";
+      return;
+    }
+    if (qty <= 0) {
+      cout << "{\"success\":false,\"error\":\"Quantity must be greater than zero.\"}\n";
+      return;
+    }
+    if (qty > stock->getQuantity()) {
+      cout << "{\"success\":false,\"error\":\"Insufficient stock. Available: " << stock->getQuantity() << "\"}\n";
+      return;
+    }
+    Medicine *med = findMedicine(stock->getMedicineID());
+    double price = med ? med->getPrice() : 0.0;
+    string mname = med ? med->getName() : "Unknown";
+
+    stock->setQuantity(stock->getQuantity() - qty);
+
+    Sale s{"S" + to_string(m_nextSaleID++), stock->getStockID(), stock->getMedicineID(), mname, customer, currentDate(), qty, price};
+    m_sales.push_back(s);
+    saveInventory();
+    saveSales();
+
+    cout << "{\"success\":true,\"saleID\":\"" << s.saleID << "\","
+         << "\"stockID\":\"" << s.stockID << "\","
+         << "\"medicineName\":\"" << s.medicineName << "\","
+         << "\"customer\":\"" << s.customerName << "\","
+         << "\"quantity\":" << qty << ","
+         << "\"priceEach\":" << price << ","
+         << "\"total\":" << (qty * price) << ","
+         << "\"date\":\"" << s.date << "\"}\n";
+  }
+
+  void apiReceive(const string &medID, const string &supID, const string &batch,
+                  int qty, double cost, const string &mfg, const string &exp, int minStock) {
+    Medicine *med = findMedicine(medID);
+    if (!med) {
+      cout << "{\"success\":false,\"error\":\"Medicine not found in catalog.\"}\n";
+      return;
+    }
+    ostringstream oss;
+    oss << "STK" << setw(3) << setfill('0') << m_nextStockNum++;
+    string stockID = oss.str();
+
+    StockItem *st = new StockItem(stockID, medID, supID, batch, qty, mfg, ExpiryDate::parse(exp), minStock);
+    m_stocks.push_back(st);
+
+    Purchase pu{"P" + to_string(m_nextPurchaseID++), stockID, medID, med->getName(), supID, currentDate(), qty, cost};
+    m_purchases.push_back(pu);
+    saveInventory();
+    savePurchases();
+
+    cout << "{\"success\":true,\"stockID\":\"" << stockID << "\","
+         << "\"purchaseID\":\"" << pu.purchaseID << "\"}\n";
+  }
+
+  void apiAddMedicine(const string &type, const string &id, const string &name,
+                      const string &mfr, double price, const string &f1, const string &f2) {
+    if (findMedicine(id)) {
+      cout << "{\"success\":false,\"error\":\"Medicine ID already exists: " << id << "\"}\n";
+      return;
+    }
+    Medicine *med = nullptr;
+    if (type == "Tablet") med = new Tablet(id, name, mfr, price, stoi(f1), stoi(f2));
+    else if (type == "Syrup") med = new Syrup(id, name, mfr, price, stod(f1), f2);
+    else if (type == "Injection") med = new Injection(id, name, mfr, price, stod(f1), f2);
+    else {
+      cout << "{\"success\":false,\"error\":\"Invalid type.\"}\n";
+      return;
+    }
+    m_medicines.push_back(med);
+    saveMedicines();
+    cout << "{\"success\":true,\"id\":\"" << id << "\"}\n";
+  }
+
+  void apiAddSupplier(const string &id, const string &comp, const string &name,
+                      const string &phone, const string &email, const string &addr) {
+    if (findSupplier(id)) {
+      cout << "{\"success\":false,\"error\":\"Supplier ID already exists: " << id << "\"}\n";
+      return;
+    }
+    m_suppliers.push_back(new Supplier(id, name, phone, addr, comp, email));
+    saveSuppliers();
+    cout << "{\"success\":true,\"id\":\"" << id << "\"}\n";
+  }
+
+  void apiAlerts() {
+    vector<Alert *> alerts;
+    for (const StockItem *s : m_stocks) {
+      Medicine *m = findMedicine(s->getMedicineID());
+      string mname = m ? m->getName() : "Medicine";
+      if (s->isExpired())
+        alerts.push_back(new ExpiryAlert(s->getStockID(), s->getMedicineID(), mname, s->getExpiry().toString(), true));
+      else if (s->isExpiringSoon())
+        alerts.push_back(new ExpiryAlert(s->getStockID(), s->getMedicineID(), mname, s->getExpiry().toString(), false));
+      if (s->isLowStock())
+        alerts.push_back(new LowStockAlert(s->getStockID(), s->getMedicineID(), mname, s->getQuantity(), s->getMinStock()));
+    }
+    ofstream af(F_ALERTS);
+    af << "# Pharma Alerts -- Generated on: " << currentDate() << "\n";
+    cout << "[\n";
+    for (size_t i = 0; i < alerts.size(); ++i) {
+      af << alerts[i]->serialize() << "\n";
+      cout << "  {"
+           << "\"type\":\"" << alerts[i]->getAlertType() << "\","
+           << "\"serialized\":\"" << alerts[i]->serialize() << "\""
+           << "}" << (i + 1 < alerts.size() ? "," : "") << "\n";
+      delete alerts[i];
+    }
+    cout << "]\n";
+  }
+
+  void apiReports() const {
+    double totalSales = 0, totalPurchases = 0;
+    for (const Sale &s : m_sales) totalSales += (s.quantity * s.priceEach);
+    for (const Purchase &p : m_purchases) totalPurchases += (p.quantity * p.costEach);
+
+    cout << "{\n"
+         << "  \"totalRevenue\":" << totalSales << ",\n"
+         << "  \"totalExpenses\":" << totalPurchases << ",\n"
+         << "  \"salesCount\":" << m_sales.size() << ",\n"
+         << "  \"purchasesCount\":" << m_purchases.size() << ",\n"
+         << "  \"sales\": [\n";
+    for (size_t i = 0; i < m_sales.size(); ++i) {
+      const Sale &s = m_sales[i];
+      cout << "    {\"saleID\":\"" << s.saleID << "\",\"stockID\":\"" << s.stockID
+           << "\",\"medicineName\":\"" << s.medicineName << "\",\"customer\":\"" << s.customerName
+           << "\",\"quantity\":" << s.quantity << ",\"total\":" << (s.quantity * s.priceEach)
+           << ",\"date\":\"" << s.date << "\"}" << (i + 1 < m_sales.size() ? "," : "") << "\n";
+    }
+    cout << "  ],\n  \"purchases\": [\n";
+    for (size_t i = 0; i < m_purchases.size(); ++i) {
+      const Purchase &p = m_purchases[i];
+      cout << "    {\"purchaseID\":\"" << p.purchaseID << "\",\"stockID\":\"" << p.stockID
+           << "\",\"medicineName\":\"" << p.medicineName << "\",\"supplierID\":\"" << p.supplierID
+           << "\",\"quantity\":" << p.quantity << ",\"total\":" << (p.quantity * p.costEach)
+           << ",\"date\":\"" << p.date << "\"}" << (i + 1 < m_purchases.size() ? "," : "") << "\n";
+    }
+    cout << "  ]\n}\n";
+  }
 };
 
 // ============================================================
@@ -1189,9 +1397,35 @@ void showMenu(const Inventory &inv) {
 }
 
 // ============================================================
-//  main() — Interactive Console
+//  main() — Interactive Console & Desktop CLI Bridge
 // ============================================================
-int main() {
+int main(int argc, char *argv[]) {
+  if (argc > 1) {
+    Inventory inv(true);
+    string cmd = argv[1];
+    if (cmd == "--api-stock") { inv.apiGetStock(); return 0; }
+    if (cmd == "--api-catalog") { inv.apiGetCatalog(); return 0; }
+    if (cmd == "--api-suppliers") { inv.apiGetSuppliers(); return 0; }
+    if (cmd == "--api-sell" && argc >= 5) {
+      inv.apiSell(argv[2], stoi(argv[3]), argv[4]);
+      return 0;
+    }
+    if (cmd == "--api-receive" && argc >= 10) {
+      inv.apiReceive(argv[2], argv[3], argv[4], stoi(argv[5]), stod(argv[6]), argv[7], argv[8], stoi(argv[9]));
+      return 0;
+    }
+    if (cmd == "--api-add-med" && argc >= 9) {
+      inv.apiAddMedicine(argv[2], argv[3], argv[4], argv[5], stod(argv[6]), argv[7], argv[8]);
+      return 0;
+    }
+    if (cmd == "--api-add-sup" && argc >= 8) {
+      inv.apiAddSupplier(argv[2], argv[3], argv[4], argv[5], argv[6], argv[7]);
+      return 0;
+    }
+    if (cmd == "--api-alerts") { inv.apiAlerts(); return 0; }
+    if (cmd == "--api-reports") { inv.apiReports(); return 0; }
+  }
+
   printBanner("PHARMA INVENTORY SYSTEM INITIALIZATION");
   Inventory inv;
   int choice = -1;
