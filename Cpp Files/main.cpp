@@ -1,34 +1,3 @@
-// ============================================================
-//  main.cpp
-//  Pharma Inventory Management System
-//  Modular 3-File Architecture:
-//    1. pharma_medicines.txt  -- Product Master Catalog
-//    2. pharma_inventory.txt  -- Physical Stock & Batch Ledger
-//    3. pharma_suppliers.txt  -- Supplier Registry
-//
-//  OOP Concepts Demonstrated:
-//  --------------------------
-//  Classes & Objects     : Medicine, StockItem, Supplier, Sale, Purchase,
-//  Alert, Inventory Encapsulation         : Data hiding via private/protected
-//  fields, validated getters/setters Inheritance           : Person -> Supplier
-//                          Medicine -> Tablet, Syrup, Injection
-//                          Alert -> ExpiryAlert, LowStockAlert
-//  Polymorphism          : vector<Medicine*>, vector<Alert*>, vector<Supplier*>
-//                          with base-class pointers processing derived objects
-//                          at runtime
-//  Virtual Functions     : display(), getType(), getUsageInstructions(),
-//                          getAlertType(), getRole(), serialize()
-//  Pure Virtual (= 0)    : Medicine::getType(),
-//  Medicine::getUsageInstructions(),
-//                          Alert::getAlertType(), Person::getRole()
-//  Virtual Destructors   : virtual ~Medicine(), virtual ~Person(), virtual
-//  ~Alert() Pointers & Memory     : Dynamic allocation with new/delete; cleaned
-//  up in Inventory::~Inventory() File Handling         : Normalised 3-File
-//  database (medicines, inventory, suppliers)
-//                          plus audit logs (pharma_sales.txt,
-//                          pharma_purchases.txt, pharma_alerts.txt)
-// ============================================================
-
 #include <algorithm>
 #include <ctime>
 #include <fstream>

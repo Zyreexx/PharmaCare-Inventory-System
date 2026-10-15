@@ -1,4 +1,5 @@
 # Pharma Alerts -- Generated on: 14/10/2026
+# Format: AlertType|StockID|MedicineID|MedicineName|Message
 EXPIRING_SOON|STK002|M002|Amoxicillin 250mg|Expiring within 3 months - prioritize clearance/return.
 EXPIRED|STK005|M005|Cough Syrup|EXPIRED - Remove from physical shelf immediately!
 LOW_STOCK|STK005|M005|Cough Syrup|Current shelf stock is below reorder threshold.
